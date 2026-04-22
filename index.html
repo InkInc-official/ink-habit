@@ -1,0 +1,845 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy"
+  content="default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'self'">
+<title>Ink Habit</title>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@300;400;500;700&family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:        #0d0d0f;
+    --surface:   #141418;
+    --surface2:  #1c1c22;
+    --surface3:  #222228;
+    --border:    #2a2a32;
+    --text:      #e8e8f0;
+    --muted:     #6b6b80;
+    --ink1:      #7c6aff;
+    --ink2:      #ff6a9b;
+    --ink3:      #6affcc;
+    --ink4:      #ffb86a;
+    --radius:    12px;
+    --sidebar-w: 224px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Zen Kaku Gothic New', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    font-size: 14px;
+    user-select: none;
+  }
+
+  /* ── タイトルバー ── */
+  .titlebar {
+    height: 36px;
+    background: var(--surface);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 14px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    -webkit-app-region: drag;
+  }
+  .titlebar-left {
+    display: flex; align-items: center; gap: 8px;
+    -webkit-app-region: no-drag;
+  }
+  .tb-logo {
+    font-family: 'DM Mono', monospace;
+    font-size: 13px; font-weight: 500;
+    letter-spacing: 0.04em;
+  }
+  .tb-logo span { color: var(--ink1); }
+  .tb-badge {
+    font-family: 'DM Mono', monospace;
+    font-size: 9px; color: var(--ink3);
+    background: rgba(106,255,204,0.08);
+    border: 1px solid rgba(106,255,204,0.2);
+    padding: 1px 6px; border-radius: 4px;
+    letter-spacing: 0.1em;
+  }
+  .titlebar-controls {
+    display: flex; gap: 6px;
+    -webkit-app-region: no-drag;
+  }
+  .ctrl {
+    width: 12px; height: 12px;
+    border-radius: 50%; border: none;
+    cursor: pointer; transition: opacity 0.12s;
+  }
+  .ctrl:hover { opacity: 0.75; }
+  .ctrl.c { background: #ff5f57; }
+  .ctrl.m { background: #febc2e; }
+  .ctrl.x { background: #28c840; }
+
+  /* ── レイアウト ── */
+  .layout { display: flex; flex: 1; overflow: hidden; }
+
+  /* ── サイドバー ── */
+  .sidebar {
+    width: var(--sidebar-w);
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    overflow-y: auto;
+    scrollbar-width: none;
+  }
+  .sidebar::-webkit-scrollbar { display: none; }
+
+  .sidebar-brand {
+    padding: 16px 16px 14px;
+    border-bottom: 1px solid var(--border);
+  }
+  .brand-name {
+    font-family: 'DM Mono', monospace;
+    font-size: 15px; font-weight: 500;
+    letter-spacing: 0.04em;
+  }
+  .brand-name span { color: var(--ink1); }
+  .brand-sub { font-size: 9px; color: var(--muted); letter-spacing: 0.14em; margin-top: 2px; }
+
+  /* アクティブセッションエリア */
+  .active-sessions {
+    padding: 10px 10px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .rec-card {
+    background: rgba(124,106,255,0.07);
+    border: 1px solid rgba(124,106,255,0.22);
+    border-radius: 10px;
+    padding: 11px 12px;
+  }
+  .rec-header {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 9px; color: var(--ink1);
+    letter-spacing: 0.12em; margin-bottom: 5px;
+  }
+  .pulse {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--ink1);
+    animation: pulse 1.4s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.3;transform:scale(0.8)} }
+  .rec-name { font-size: 13px; font-weight: 500; margin-bottom: 1px; }
+  .rec-timer {
+    font-family: 'DM Mono', monospace;
+    font-size: 21px; color: var(--ink1);
+    letter-spacing: 0.03em; margin: 2px 0 1px;
+  }
+  .rec-meta { font-size: 10px; color: var(--muted); }
+  .rec-est { font-size: 10px; color: var(--muted); margin-top: 1px; }
+  .rec-est span { color: var(--ink4); }
+  .btn-stop {
+    width: 100%; margin-top: 8px;
+    padding: 6px 0; border-radius: 6px;
+    border: 1px solid rgba(255,106,155,0.3);
+    background: rgba(255,106,155,0.07);
+    color: var(--ink2); font-size: 11px;
+    cursor: pointer; font-family: inherit;
+    transition: background 0.14s;
+  }
+  .btn-stop:hover { background: rgba(255,106,155,0.15); }
+
+  /* リマインダー警告 */
+  .remind-warn {
+    margin: 0 10px;
+    background: rgba(255,184,106,0.08);
+    border: 1px solid rgba(255,184,106,0.28);
+    border-radius: 8px;
+    padding: 8px 10px;
+    display: none; gap: 8px; align-items: flex-start;
+  }
+  .remind-warn.visible { display: flex; }
+  .remind-icon { font-size: 13px; flex-shrink: 0; margin-top: 1px; }
+  .remind-text { font-size: 11px; color: var(--ink4); line-height: 1.5; }
+  .remind-text b { display: block; font-size: 9px; letter-spacing: 0.08em; margin-bottom: 1px; }
+
+  /* Ink Inc. ブランディング */
+  .ink-brand {
+    margin: 6px 10px 0;
+    background: linear-gradient(135deg, rgba(124,106,255,0.06), rgba(106,255,204,0.04));
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 11px 12px;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+    text-decoration: none;
+    display: block;
+  }
+  .ink-brand:hover {
+    border-color: rgba(124,106,255,0.35);
+    background: linear-gradient(135deg, rgba(124,106,255,0.1), rgba(106,255,204,0.06));
+  }
+  .ink-brand-top {
+    display: flex; align-items: center; gap: 6px; margin-bottom: 5px;
+  }
+  .ink-brand-logo {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px; font-weight: 500;
+    color: var(--ink1); letter-spacing: 0.04em;
+  }
+  .ink-brand-tag {
+    font-size: 9px; color: var(--muted);
+    background: var(--surface2);
+    padding: 1px 5px; border-radius: 3px; letter-spacing: 0.08em;
+  }
+  .ink-brand-msg { font-size: 11px; color: var(--muted); line-height: 1.55; }
+  .ink-brand-link {
+    display: inline-flex; align-items: center; gap: 3px;
+    font-size: 10px; color: var(--ink3);
+    margin-top: 5px; letter-spacing: 0.04em;
+  }
+
+  /* ナビ */
+  .nav-wrap { padding: 8px 8px 0; flex: 1; }
+  .nav-label {
+    font-size: 9px; color: var(--muted);
+    letter-spacing: 0.15em; text-transform: uppercase;
+    padding: 8px 10px 4px;
+  }
+  .nav-item {
+    display: flex; align-items: center; gap: 9px;
+    padding: 7px 10px; border-radius: 8px;
+    cursor: pointer; color: var(--muted);
+    transition: all 0.13s; font-size: 12px;
+  }
+  .nav-item:hover { background: var(--surface2); color: var(--text); }
+  .nav-item.active { background: var(--surface2); color: var(--text); }
+  .nav-item.active .ni { color: var(--ink1); }
+  .ni { font-size: 13px; width: 16px; text-align: center; }
+
+  .sidebar-footer {
+    padding: 10px 8px;
+    border-top: 1px solid var(--border);
+    margin-top: auto;
+  }
+
+  /* ── メイン ── */
+  .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+  /* 入力ゾーン */
+  .input-zone {
+    padding: 20px 24px 14px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .input-eyebrow {
+    font-size: 10px; color: var(--muted);
+    letter-spacing: 0.14em; margin-bottom: 9px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .input-eyebrow::after {
+    content: ''; flex: 1; height: 1px; background: var(--border);
+  }
+  .input-row { display: flex; gap: 8px; }
+  .task-input {
+    flex: 1;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 11px 14px;
+    font-size: 15px; color: var(--text);
+    font-family: inherit; outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+    user-select: text;
+  }
+  .task-input:focus {
+    border-color: var(--ink1);
+    box-shadow: 0 0 0 3px rgba(124,106,255,0.1);
+  }
+  .task-input::placeholder { color: var(--muted); font-size: 13px; }
+
+  .input-right { display: flex; flex-direction: column; gap: 6px; }
+  .est-row { display: flex; gap: 6px; align-items: center; }
+  .est-input {
+    width: 72px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 11px 10px;
+    font-size: 13px; color: var(--text);
+    font-family: 'DM Mono', monospace;
+    outline: none; text-align: right;
+    transition: border-color 0.15s;
+    user-select: text;
+  }
+  .est-input:focus { border-color: var(--ink4); }
+  .est-label { font-size: 11px; color: var(--muted); white-space: nowrap; }
+  .btn-start {
+    padding: 11px 18px;
+    border-radius: var(--radius);
+    border: none; background: var(--ink1);
+    color: #fff; font-size: 13px;
+    font-family: inherit; font-weight: 500;
+    cursor: pointer; white-space: nowrap;
+    transition: opacity 0.14s; height: 100%;
+  }
+  .btn-start:hover { opacity: 0.82; }
+
+  /* サジェスト */
+  .suggest-row {
+    display: flex; gap: 5px; margin-top: 9px; flex-wrap: wrap;
+  }
+  .chip {
+    padding: 3px 10px; border-radius: 20px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    font-size: 11px; color: var(--muted);
+    cursor: pointer; transition: all 0.12s;
+  }
+  .chip:hover { border-color: var(--ink1); color: var(--ink1); }
+
+  /* ── タブ ── */
+  .tab-bar {
+    display: flex; gap: 0;
+    border-bottom: 1px solid var(--border);
+    padding: 0 24px;
+    flex-shrink: 0;
+  }
+  .tab {
+    padding: 10px 16px;
+    font-size: 12px; color: var(--muted);
+    cursor: pointer; border-bottom: 2px solid transparent;
+    transition: all 0.13s; margin-bottom: -1px;
+  }
+  .tab:hover { color: var(--text); }
+  .tab.active { color: var(--text); border-bottom-color: var(--ink1); }
+
+  /* ── コンテンツ ── */
+  .tab-content { display: none; flex: 1; overflow-y: auto; padding: 20px 24px; }
+  .tab-content.active { display: block; }
+  .tab-content::-webkit-scrollbar { width: 3px; }
+  .tab-content::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  /* グリッド */
+  .grid-2 {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 14px; margin-bottom: 14px;
+  }
+  .grid-full { margin-bottom: 14px; }
+
+  /* カード */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+  }
+  .card-head {
+    display: flex; align-items: center;
+    justify-content: space-between; margin-bottom: 13px;
+  }
+  .card-title {
+    font-size: 10px; color: var(--muted);
+    letter-spacing: 0.13em; text-transform: uppercase;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .cdot { width: 5px; height: 5px; border-radius: 50%; }
+  .card-meta { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--muted); }
+
+  /* サマリー */
+  .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .stat-val {
+    font-family: 'DM Mono', monospace;
+    font-size: 21px; color: var(--text);
+  }
+  .stat-val small { font-size: 11px; color: var(--muted); margin-left: 1px; }
+  .stat-label { font-size: 10px; color: var(--muted); margin-top: 2px; }
+
+  /* カテゴリバー */
+  .cat-list { display: flex; flex-direction: column; gap: 9px; }
+  .cat-top { display: flex; justify-content: space-between; margin-bottom: 4px; }
+  .cat-name { font-size: 12px; }
+  .cat-time { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--muted); }
+  .bar-bg { height: 3px; background: var(--surface2); border-radius: 2px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 2px; transition: width 0.6s cubic-bezier(0.4,0,0.2,1); }
+
+  /* セッションログ */
+  .session-list { display: flex; flex-direction: column; gap: 1px; }
+  .session-row {
+    display: flex; align-items: center; gap: 9px;
+    padding: 7px 9px; border-radius: 7px;
+    transition: background 0.12s;
+  }
+  .session-row:hover { background: var(--surface2); }
+  .sdot { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
+  .sname { flex: 1; font-size: 12px; }
+  .scat {
+    font-size: 9px; color: var(--muted);
+    background: var(--surface2); padding: 2px 5px; border-radius: 4px;
+  }
+  .sdur { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--muted); width: 48px; text-align: right; }
+  .stime { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--muted); width: 40px; text-align: right; }
+
+  /* LION EYE */
+  .lion-eye-header { display: flex; align-items: center; gap: 8px; }
+  .lion-icon { font-size: 15px; }
+  .trend-list { display: flex; flex-direction: column; gap: 6px; }
+  .trend-row {
+    display: flex; gap: 10px;
+    padding: 9px 11px;
+    background: var(--surface2); border-radius: 8px;
+    border-left: 2px solid transparent;
+    transition: border-color 0.15s;
+  }
+  .trend-row:hover { border-left-color: var(--ink3); }
+  .trend-arrow { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--muted); flex-shrink: 0; }
+  .trend-body { font-size: 12px; line-height: 1.65; }
+
+  .lion-controls {
+    display: flex; gap: 8px; align-items: center; margin-bottom: 14px;
+  }
+  .date-input {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; padding: 7px 10px;
+    font-size: 12px; color: var(--text);
+    font-family: 'DM Mono', monospace; outline: none;
+    transition: border-color 0.15s;
+    user-select: text;
+  }
+  .date-input:focus { border-color: var(--ink1); }
+  .btn-run {
+    padding: 7px 14px; border-radius: 8px;
+    border: none; background: var(--ink1);
+    color: #fff; font-size: 12px;
+    font-family: inherit; cursor: pointer;
+    transition: opacity 0.14s;
+  }
+  .btn-run:hover { opacity: 0.82; }
+  .btn-run:disabled { opacity: 0.4; cursor: not-allowed; }
+  .lion-range-label { font-size: 11px; color: var(--muted); }
+
+  /* 設定 */
+  .setting-group { margin-bottom: 20px; }
+  .setting-label {
+    font-size: 10px; color: var(--muted);
+    letter-spacing: 0.12em; text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+  .setting-row {
+    display: flex; align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px; margin-bottom: 6px;
+  }
+  .setting-name { font-size: 13px; }
+  .setting-desc { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .setting-control { display: flex; align-items: center; gap: 8px; }
+  .s-input {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 6px; padding: 5px 10px;
+    font-size: 12px; color: var(--text);
+    font-family: inherit; outline: none; width: 80px;
+    user-select: text;
+  }
+  .s-select {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 6px; padding: 5px 10px;
+    font-size: 12px; color: var(--text);
+    font-family: inherit; outline: none;
+  }
+  .toggle {
+    width: 36px; height: 20px; border-radius: 10px;
+    background: var(--surface2); border: 1px solid var(--border);
+    cursor: pointer; position: relative; transition: background 0.2s;
+    flex-shrink: 0;
+  }
+  .toggle.on { background: var(--ink1); border-color: var(--ink1); }
+  .toggle::after {
+    content: ''; position: absolute;
+    width: 14px; height: 14px; border-radius: 50%;
+    background: #fff; top: 2px; left: 2px;
+    transition: left 0.2s;
+  }
+  .toggle.on::after { left: 18px; }
+
+  /* 過去セッション追加モーダル */
+  .modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.6);
+    display: none; align-items: center; justify-content: center;
+    z-index: 200;
+  }
+  .modal-overlay.visible { display: flex; }
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px;
+    width: 380px;
+    box-shadow: 0 16px 48px rgba(0,0,0,0.5);
+  }
+  .modal-title {
+    font-size: 13px; font-weight: 500;
+    margin-bottom: 18px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .modal-row { margin-bottom: 12px; }
+  .modal-label { font-size: 10px; color: var(--muted); letter-spacing: 0.1em; margin-bottom: 5px; }
+  .modal-input {
+    width: 100%;
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 8px; padding: 9px 12px;
+    font-size: 13px; color: var(--text);
+    font-family: inherit; outline: none;
+    transition: border-color 0.15s;
+    user-select: text;
+  }
+  .modal-input:focus { border-color: var(--ink1); }
+  .modal-row-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+  .modal-actions { display: flex; gap: 8px; margin-top: 20px; justify-content: flex-end; }
+  .btn-cancel {
+    padding: 8px 16px; border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--muted); font-size: 12px;
+    font-family: inherit; cursor: pointer;
+    transition: background 0.13s;
+  }
+  .btn-cancel:hover { background: var(--surface3); }
+  .btn-add {
+    padding: 8px 16px; border-radius: 8px;
+    border: none; background: var(--ink1);
+    color: #fff; font-size: 12px;
+    font-family: inherit; cursor: pointer;
+    transition: opacity 0.13s;
+  }
+  .btn-add:hover { opacity: 0.82; }
+
+  /* カテゴリ編集チップ */
+  .scat-edit {
+    font-size: 9px; color: var(--muted);
+    background: var(--surface2); padding: 2px 5px; border-radius: 4px;
+    cursor: pointer; border: 1px solid transparent;
+    transition: border-color 0.13s;
+  }
+  .scat-edit:hover { border-color: var(--ink1); color: var(--ink1); }
+  .scat-input {
+    font-size: 10px; background: var(--surface2);
+    border: 1px solid var(--ink1); border-radius: 4px;
+    padding: 1px 6px; color: var(--text);
+    font-family: inherit; outline: none; width: 80px;
+    user-select: text;
+  }
+
+  /* 過去追加ボタン */
+  .btn-add-past {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 11px; color: var(--muted);
+    background: none; border: 1px dashed var(--border);
+    border-radius: 6px; padding: 5px 12px;
+    cursor: pointer; margin-top: 10px;
+    transition: all 0.13s; font-family: inherit;
+  }
+  .btn-add-past:hover { border-color: var(--ink1); color: var(--ink1); }
+  .empty {
+    text-align: center; padding: 40px 20px;
+    color: var(--muted); font-size: 13px;
+    line-height: 1.8;
+  }
+
+  /* ローディング */
+  .loading {
+    display: flex; align-items: center; gap: 10px;
+    color: var(--muted); font-size: 12px; padding: 16px 0;
+  }
+  .spin {
+    width: 16px; height: 16px; border-radius: 50%;
+    border: 2px solid var(--border);
+    border-top-color: var(--ink1);
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<!-- タイトルバー -->
+<div class="titlebar">
+  <div class="titlebar-left">
+    <span class="tb-logo">Ink<span>.</span>Habit</span>
+    <span class="tb-badge">v2.0</span>
+  </div>
+  <div class="titlebar-controls">
+    <button class="ctrl c" id="btn-close"></button>
+    <button class="ctrl m" id="btn-min"></button>
+    <button class="ctrl x" id="btn-max"></button>
+  </div>
+</div>
+
+<div class="layout">
+
+  <!-- サイドバー -->
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-name">Ink<span>.</span>Habit</div>
+      <div class="brand-sub">by Ink Inc.</div>
+    </div>
+
+    <!-- アクティブセッション -->
+    <div class="active-sessions" id="active-sessions">
+      <!-- renderer.jsで動的生成 -->
+    </div>
+
+    <!-- リマインダー警告 -->
+    <div class="remind-warn" id="remind-warn">
+      <div class="remind-icon">⚠</div>
+      <div class="remind-text">
+        <b>REMINDER</b>
+        <span id="remind-msg">切り替えを忘れていませんか？</span>
+      </div>
+    </div>
+
+    <!-- Ink Inc. ブランディング -->
+    <div class="ink-brand" id="ink-brand-link">
+      <div class="ink-brand-top">
+        <span class="ink-brand-logo">Ink Inc.</span>
+        <span class="ink-brand-tag">TOOL</span>
+      </div>
+      <div class="ink-brand-msg">このツールはInk Inc.が制作しました。ライバー募集中です。</div>
+      <div class="ink-brand-link">公式サイトへ →</div>
+    </div>
+
+    <!-- ナビゲーション -->
+    <div class="nav-wrap">
+      <div class="nav-label">メニュー</div>
+      <div class="nav-item active" data-tab="today">
+        <span class="ni">○</span>今日
+      </div>
+      <div class="nav-item" data-tab="log">
+        <span class="ni">□</span>記録一覧
+      </div>
+      <div class="nav-item" data-tab="lion">
+        <span class="ni">🦁</span>LION EYE
+      </div>
+      <div class="nav-label">設定</div>
+      <div class="nav-item" data-tab="settings">
+        <span class="ni">◇</span>設定
+      </div>
+    </div>
+
+    <div class="sidebar-footer">
+      <div class="nav-item" id="btn-quit">
+        <span class="ni">✕</span>終了
+      </div>
+    </div>
+  </aside>
+
+  <!-- メイン -->
+  <main class="main">
+
+    <!-- 入力ゾーン -->
+    <div class="input-zone">
+      <div class="input-eyebrow">NOW — 何をはじめますか？</div>
+      <div class="input-row">
+        <input class="task-input" id="task-input"
+          type="text" placeholder="例：IRIAM配信、AI音楽制作、Ink Memory更新…"
+          autocomplete="off">
+        <div class="input-right">
+          <div class="est-row">
+            <input class="est-input" id="est-input"
+              type="number" placeholder="60" min="1" max="480">
+            <span class="est-label">分で終える</span>
+          </div>
+        </div>
+        <button class="btn-start" id="btn-start">▶ 開始</button>
+      </div>
+      <div class="suggest-row" id="suggest-row">
+        <!-- 動的生成 -->
+      </div>
+    </div>
+
+    <!-- タブバー -->
+    <div class="tab-bar">
+      <div class="tab active" data-tab="today">今日</div>
+      <div class="tab" data-tab="log">記録一覧</div>
+      <div class="tab" data-tab="lion">🦁 LION EYE</div>
+      <div class="tab" data-tab="settings">設定</div>
+    </div>
+
+    <!-- 今日タブ -->
+    <div class="tab-content active" id="tab-today">
+      <div class="grid-2">
+        <div class="card" id="card-today-summary">
+          <div class="card-head">
+            <span class="card-title"><span class="cdot" style="background:var(--ink1)"></span>TODAY</span>
+            <span class="card-meta" id="today-date">—</span>
+          </div>
+          <div class="stat-grid" id="today-stats">
+            <div><div class="stat-val" id="stat-total">—</div><div class="stat-label">総活動時間</div></div>
+            <div><div class="stat-val" id="stat-count">—</div><div class="stat-label">セッション数</div></div>
+            <div><div class="stat-val" id="stat-remind" style="color:var(--ink4)">—</div><div class="stat-label">リマインダー発火</div></div>
+            <div><div class="stat-val" id="stat-top-cat" style="font-size:15px;color:var(--ink3)">—</div><div class="stat-label">最多カテゴリ</div></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-head">
+            <span class="card-title"><span class="cdot" style="background:var(--ink2)"></span>CATEGORY</span>
+            <span class="card-meta">本日</span>
+          </div>
+          <div class="cat-list" id="cat-list">
+            <div class="empty">記録なし</div>
+          </div>
+        </div>
+      </div>
+      <div class="card grid-full">
+        <div class="card-head">
+          <span class="card-title"><span class="cdot" style="background:var(--ink3)"></span>SESSION LOG</span>
+          <span class="card-meta" id="log-count">本日 0件</span>
+        </div>
+        <div class="session-list" id="today-session-list">
+          <div class="empty">まだ記録がありません。<br>上の入力欄からタスクを開始してください。</div>
+        </div>
+        <button class="btn-add-past" id="btn-add-past">＋ 過去のセッションを追加</button>
+      </div>
+    </div>
+
+    <!-- 記録一覧タブ -->
+    <div class="tab-content" id="tab-log">
+      <div class="card">
+        <div class="card-head">
+          <span class="card-title"><span class="cdot" style="background:var(--ink1)"></span>ALL SESSIONS</span>
+          <span class="card-meta" id="all-log-count">0件</span>
+        </div>
+        <div class="session-list" id="all-session-list">
+          <div class="empty">記録がありません。</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- LION EYEタブ -->
+    <div class="tab-content" id="tab-lion">
+      <div class="lion-controls">
+        <span class="lion-range-label">期間：</span>
+        <input class="date-input" id="lion-start" type="date">
+        <span class="lion-range-label">〜</span>
+        <input class="date-input" id="lion-end" type="date">
+        <button class="btn-run" id="btn-lion-run">🦁 分析する</button>
+      </div>
+      <div class="card">
+        <div class="card-head">
+          <span class="card-title">
+            <span class="lion-icon">🦁</span>
+            LION EYE
+          </span>
+          <span class="card-meta" id="lion-period">—</span>
+        </div>
+        <div id="lion-result">
+          <div class="empty">期間を選択して「分析する」を押してください。</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 設定タブ -->
+    <div class="tab-content" id="tab-settings">
+      <div class="setting-group">
+        <div class="setting-label">リマインダー</div>
+        <div class="setting-row">
+          <div>
+            <div class="setting-name">通知間隔</div>
+            <div class="setting-desc">同じタスクが続いた場合に通知するまでの時間</div>
+          </div>
+          <div class="setting-control">
+            <input class="s-input" id="s-reminder" type="number" min="10" max="240" value="60">
+            <span style="font-size:11px;color:var(--muted)">分</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="setting-group">
+        <div class="setting-label">LION EYE — AIモード</div>
+        <div class="setting-row">
+          <div>
+            <div class="setting-name">LLMモード</div>
+            <div class="setting-desc">レポート生成に使用するAI</div>
+          </div>
+          <div class="setting-control">
+            <select class="s-select" id="s-llm-mode">
+              <option value="basic">① 基本（AIなし）</option>
+              <option value="ollama">② ローカルLLM（Ollama）</option>
+            </select>
+          </div>
+        </div>
+        <div class="setting-row" id="s-row-ollama" style="display:none">
+          <div>
+            <div class="setting-name">Ollamaモデル</div>
+          </div>
+          <div class="setting-control">
+            <select class="s-select" id="s-ollama-model">
+              <option value="qwen2.5:7b">qwen2.5:7b</option>
+            </select>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="setting-group">
+        <div class="setting-label">システム</div>
+        <div class="setting-row">
+          <div>
+            <div class="setting-name">PC起動時に自動起動</div>
+          </div>
+          <div class="setting-control">
+            <div class="toggle" id="toggle-startup"></div>
+          </div>
+        </div>
+      </div>
+
+      <button class="btn-run" id="btn-save-settings" style="margin-top:8px">設定を保存</button>
+    </div>
+
+  </main>
+</div>
+
+<!-- 過去セッション追加モーダル -->
+<div class="modal-overlay" id="modal-past">
+  <div class="modal">
+    <div class="modal-title">＋ 過去のセッションを追加</div>
+    <div class="modal-row">
+      <div class="modal-label">タスク名</div>
+      <input class="modal-input" id="past-name" type="text" placeholder="例：面談、Web開発…">
+    </div>
+    <div class="modal-row">
+      <div class="modal-label">カテゴリ（空欄で自動判定）</div>
+      <input class="modal-input" id="past-category" type="text" placeholder="例：仕事、制作、休憩…">
+    </div>
+    <div class="modal-row">
+      <div class="modal-label">日付</div>
+      <input class="modal-input" id="past-date" type="date">
+    </div>
+    <div class="modal-row-2col">
+      <div>
+        <div class="modal-label">開始時刻</div>
+        <input class="modal-input" id="past-start" type="time">
+      </div>
+      <div>
+        <div class="modal-label">終了時刻</div>
+        <input class="modal-input" id="past-end" type="time">
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" id="modal-cancel">キャンセル</button>
+      <button class="btn-add" id="modal-submit">追加する</button>
+    </div>
+  </div>
+</div>
+
+<script src="renderer.js"></script>
+</body>
+</html>
