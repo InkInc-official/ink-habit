@@ -2,9 +2,12 @@
   "name": "ink-habit",
   "version": "2.0.0",
   "description": "Ink Habit — 活動記録・過集中防止ツール by Ink Inc.",
+  "author": {
+    "name": "Ink Inc."
+  },
   "main": "main.js",
   "scripts": {
-    "start": "electron .",
+    "start": "electron . --no-sandbox",
     "build:win": "electron-builder --win",
     "build:linux": "electron-builder --linux",
     "build:all": "electron-builder --win --linux"
@@ -30,8 +33,7 @@
     },
     "linux": {
       "target": [
-        { "target": "AppImage", "arch": ["x64"] },
-        { "target": "deb",      "arch": ["x64"] }
+        { "target": "AppImage", "arch": ["x64"] }
       ],
       "icon": "assets/icon.png",
       "category": "Utility"
@@ -42,9 +44,6 @@
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "shortcutName": "Ink Habit"
-    },
-    "deb": {
-      "depends": ["python3", "libnotify-bin"]
     }
   },
   "dependencies": {
