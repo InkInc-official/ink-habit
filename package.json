@@ -29,14 +29,16 @@
     ],
     "win": {
       "target": [{ "target": "nsis", "arch": ["x64"] }],
-      "icon": "assets/icon.ico"
+      "icon": "assets/icon.ico",
+      "artifactName": "InkHabitSetup-${version}.exe"
     },
     "linux": {
       "target": [
         { "target": "AppImage", "arch": ["x64"] }
       ],
       "icon": "assets/icon.png",
-      "category": "Utility"
+      "category": "Utility",
+      "artifactName": "InkHabit-${version}.AppImage"
     },
     "nsis": {
       "oneClick": false,
