@@ -48,6 +48,12 @@ function getWorkerPath() {
   return path.join(process.resourcesPath, 'python', 'worker.py')
 }
 
+// EPIPE等の未捕捉エラーを握りつぶす
+process.on('uncaughtException', (e) => {
+  if (e.code === 'EPIPE') return
+  console.error('[uncaughtException]', e)
+})
+
 // ── Python Worker ─────────────────────────────────
 function startPython() {
   if (pythonProcess) return
@@ -84,8 +90,12 @@ function startPython() {
 }
 
 function sendToPython(obj) {
-  if (pythonProcess?.stdin?.writable)
-    pythonProcess.stdin.write(JSON.stringify(obj) + '\n')
+  try {
+    if (pythonProcess?.stdin?.writable)
+      pythonProcess.stdin.write(JSON.stringify(obj) + '\n')
+  } catch (e) {
+    if (e.code !== 'EPIPE') console.error('[sendToPython error]', e)
+  }
 }
 
 // ── Pythonメッセージ処理 ──────────────────────────
@@ -249,13 +259,7 @@ function createWindow() {
   mainWindow.on('close', (e) => {
     if (!isQuitting) {
       e.preventDefault()
-      mainWindow.hide()
-      if (process.platform === 'win32' && tray) {
-        tray.displayBalloon({
-          title:   'Ink Habit',
-          content: 'タスクトレイに格納しました。終了するにはトレイアイコンを右クリックしてください。'
-        })
-      }
+      mainWindow.minimize()
     }
   })
 }
