@@ -149,7 +149,10 @@ function renderActiveSessions() {
       : ''
 
     card.innerHTML = `
-      <div class="rec-header"><div class="pulse"></div>REC</div>
+      <div class="rec-header">
+        <div class="rec-header-left"><div class="pulse"></div>REC</div>
+        <button class="btn-edit-rec" data-id="${session.id}">✎</button>
+      </div>
       <div class="rec-name">${escHtml(session.name)}</div>
       <div class="rec-timer" data-started="${session.started_at}">${fmtTimer(elapsed)}</div>
       <div class="rec-meta">${session.category}</div>
@@ -162,6 +165,11 @@ function renderActiveSessions() {
   // 停止ボタン
   container.querySelectorAll('.btn-stop').forEach(btn => {
     btn.addEventListener('click', () => stopSession(parseInt(btn.dataset.id)))
+  })
+
+  // RECカード編集ボタン
+  container.querySelectorAll('.btn-edit-rec').forEach(btn => {
+    btn.addEventListener('click', () => openEditModal(parseInt(btn.dataset.id)))
   })
 
   startTimerLoop(true)
@@ -287,14 +295,24 @@ function renderAllSessions(rows) {
   rows.forEach(r => {
     const color = CAT_COLORS[r.category] || '#555'
     const dur   = r.duration_sec ? fmtSecShort(r.duration_sec) : '計測中…'
-    list.innerHTML += `
-      <div class="session-row">
-        <div class="sdot" style="background:${color}"></div>
-        <span class="sname">${escHtml(r.name)}</span>
-        <span class="scat">${r.category}</span>
-        <span class="sdur">${dur}</span>
-        <span class="stime">${fmtTime(r.started_at)}</span>
-      </div>`
+    const row   = document.createElement('div')
+    row.className = 'session-row'
+    row.innerHTML = `
+      <div class="sdot" style="background:${color}"></div>
+      <span class="sname">${escHtml(r.name)}</span>
+      <span class="scat-edit" data-id="${r.id}" data-cat="${escHtml(r.category)}">${escHtml(r.category)}</span>
+      <span class="sdur">${dur}</span>
+      <span class="stime">${fmtTime(r.started_at)}</span>
+      <button class="btn-edit-session" data-id="${r.id}">✎</button>
+    `
+    list.appendChild(row)
+  })
+
+  list.querySelectorAll('.scat-edit').forEach(el => {
+    el.addEventListener('click', () => startCatEdit(el))
+  })
+  list.querySelectorAll('.btn-edit-session').forEach(btn => {
+    btn.addEventListener('click', () => openEditModal(parseInt(btn.dataset.id)))
   })
 }
 
@@ -545,8 +563,9 @@ function openEditModal(sessionId, rowEl) {
 }
 
 function _openEditModalWithData(session) {
-  const started = new Date(session.started_at)
-  const ended   = session.ended_at ? new Date(session.ended_at) : new Date()
+  const started  = new Date(session.started_at)
+  const isActive = !session.ended_at
+  const ended    = session.ended_at ? new Date(session.ended_at) : new Date()
 
   document.getElementById('edit-session-id').value = session.id
   document.getElementById('edit-name').value       = session.name
@@ -554,6 +573,11 @@ function _openEditModalWithData(session) {
   document.getElementById('edit-date').value       = session.started_at.split('T')[0]
   document.getElementById('edit-start').value      = started.toTimeString().slice(0,5)
   document.getElementById('edit-end').value        = ended.toTimeString().slice(0,5)
+
+  // アクティブセッションの場合は終了時刻を「今」として強制終了も可能
+  const endLabel = document.querySelector('label[for="edit-end"], .modal-label:last-of-type')
+  document.getElementById('edit-end').placeholder = isActive ? '現在時刻で終了' : ''
+
   document.getElementById('modal-edit').classList.add('visible')
   document.getElementById('edit-name').focus()
 }
@@ -578,24 +602,33 @@ document.getElementById('edit-submit').addEventListener('click', () => {
   const start    = document.getElementById('edit-start').value
   const end      = document.getElementById('edit-end').value
 
-  if (!name || !date || !start || !end) return
+  if (!name || !date || !start) return
 
   const startedAt = `${date}T${start}:00`
-  const endedAt   = `${date}T${end}:00`
+  const payload   = { session_id: sid, name, category, started_at: startedAt }
 
-  if (endedAt <= startedAt) {
-    alert('終了時刻は開始時刻より後にしてください。')
-    return
+  if (end) {
+    const endedAt = `${date}T${end}:00`
+    if (endedAt <= startedAt) {
+      alert('終了時刻は開始時刻より後にしてください。')
+      return
+    }
+    payload.ended_at = endedAt
   }
 
-  window.inkHabit.sessionEdit({
-    session_id:  sid,
-    name,
-    category,
-    started_at:  startedAt,
-    ended_at:    endedAt
-  })
+  window.inkHabit.sessionEdit(payload)
   document.getElementById('modal-edit').classList.remove('visible')
+
+  // アクティブセッションの場合はRECカードも更新
+  const session = activeSessions.find(s => s.id === sid)
+  if (session && end) {
+    activeSessions = activeSessions.filter(s => s.id !== sid)
+    renderActiveSessions()
+  } else if (session) {
+    session.name     = name
+    session.category = category
+    renderActiveSessions()
+  }
 })
 
 document.getElementById('edit-delete').addEventListener('click', () => {

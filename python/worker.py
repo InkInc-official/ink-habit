@@ -612,17 +612,22 @@ def handle(msg):
         name     = normalize_task_name(msg['name'])
         category = msg.get('category') or get_learned_category(name)
         started  = msg['started_at']
-        ended    = msg['ended_at']
-        start_dt = datetime.datetime.fromisoformat(started)
-        end_dt   = datetime.datetime.fromisoformat(ended)
-        duration = max(0, int((end_dt - start_dt).total_seconds()))
-        db_update('sessions', {
-            'name':         name,
-            'category':     category,
-            'started_at':   started,
-            'ended_at':     ended,
-            'duration_sec': duration
-        }, {'id': sid})
+        ended    = msg.get('ended_at')
+
+        update_data = {
+            'name':     name,
+            'category': category,
+            'started_at': started,
+        }
+
+        if ended:
+            start_dt = datetime.datetime.fromisoformat(started)
+            end_dt   = datetime.datetime.fromisoformat(ended)
+            duration = max(0, int((end_dt - start_dt).total_seconds()))
+            update_data['ended_at']     = ended
+            update_data['duration_sec'] = duration
+
+        db_update('sessions', update_data, {'id': sid})
         send({'type': 'session-edited', 'req': msg.get('req'), 'session_id': sid})
 
     # ── セッション削除 ──

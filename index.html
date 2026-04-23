@@ -127,7 +127,17 @@
     display: flex; align-items: center; gap: 6px;
     font-size: 9px; color: var(--ink1);
     letter-spacing: 0.12em; margin-bottom: 5px;
+    justify-content: space-between;
   }
+  .rec-header-left { display: flex; align-items: center; gap: 6px; }
+  .btn-edit-rec {
+    background: none; border: none;
+    color: var(--muted); font-size: 11px;
+    cursor: pointer; padding: 1px 4px;
+    border-radius: 4px;
+    transition: color 0.12s;
+  }
+  .btn-edit-rec:hover { color: var(--ink1); }
   .pulse {
     width: 6px; height: 6px; border-radius: 50%;
     background: var(--ink1);
@@ -597,7 +607,7 @@
 <div class="titlebar">
   <div class="titlebar-left">
     <span class="tb-logo">Ink<span>.</span>Habit</span>
-    <span class="tb-badge">v2.1</span>
+    <span class="tb-badge">v2.1.1</span>
   </div>
   <div class="titlebar-controls">
     <button class="ctrl c" id="btn-close"></button>
