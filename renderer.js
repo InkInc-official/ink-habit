@@ -251,6 +251,7 @@ function renderTodaySessions(allRows) {
       <span class="scat-edit" data-id="${r.id}" data-cat="${escHtml(r.category)}">${escHtml(r.category)}</span>
       <span class="sdur">${fmtSecShort(r.duration_sec || 0)}</span>
       <span class="stime">${fmtTime(r.started_at)}</span>
+      <button class="btn-edit-session" data-id="${r.id}">✎</button>
     `
     list.appendChild(row)
   })
@@ -258,6 +259,15 @@ function renderTodaySessions(allRows) {
   // カテゴリ編集イベント
   list.querySelectorAll('.scat-edit').forEach(el => {
     el.addEventListener('click', () => startCatEdit(el))
+  })
+
+  // 編集ボタンイベント
+  list.querySelectorAll('.btn-edit-session').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id  = parseInt(btn.dataset.id)
+      const row = btn.closest('.session-row')
+      openEditModal(id, row)
+    })
   })
 }
 
@@ -432,6 +442,14 @@ window.inkHabit.onPythonMessage(msg => {
       loadTodaySessions()
       break
 
+    case 'session-edited':
+      loadTodaySessions()
+      break
+
+    case 'session-deleted':
+      loadTodaySessions()
+      break
+
     case 'session-past-added':
       loadTodaySessions()
       loadSuggestions()
@@ -443,6 +461,15 @@ window.inkHabit.onPythonMessage(msg => {
 
     case 'db-result':
       if (msg.rows) {
+        // 編集モーダル用
+        if (window._pendingEditId !== undefined && window._pendingEditId !== null) {
+          const session = msg.rows.find(r => r.id === window._pendingEditId)
+          if (session) {
+            window._pendingEditId = null
+            _openEditModalWithData(session)
+            break
+          }
+        }
         // 今日タブ or 全件ログ
         const activeTab = document.querySelector('.tab-content.active')?.id
         if (activeTab === 'tab-today') renderTodaySessions(msg.rows)
@@ -504,6 +531,79 @@ window.inkHabit.onFocusInput(() => {
 })
 
 window.inkHabit.onShowTab(tab => switchTab(tab))
+
+// ── セッション編集モーダル ────────────────────────
+let _editSessionData = null
+
+function openEditModal(sessionId, rowEl) {
+  // DBから該当セッションを取得
+  window.inkHabit.dbQuery({
+    table: 'sessions',
+    where: { id: sessionId }
+  })
+  window._pendingEditId = sessionId
+}
+
+function _openEditModalWithData(session) {
+  const started = new Date(session.started_at)
+  const ended   = session.ended_at ? new Date(session.ended_at) : new Date()
+
+  document.getElementById('edit-session-id').value = session.id
+  document.getElementById('edit-name').value       = session.name
+  document.getElementById('edit-category').value   = session.category
+  document.getElementById('edit-date').value       = session.started_at.split('T')[0]
+  document.getElementById('edit-start').value      = started.toTimeString().slice(0,5)
+  document.getElementById('edit-end').value        = ended.toTimeString().slice(0,5)
+  document.getElementById('modal-edit').classList.add('visible')
+  document.getElementById('edit-name').focus()
+}
+
+document.getElementById('edit-cancel').addEventListener('click', () => {
+  document.getElementById('modal-edit').classList.remove('visible')
+  window._pendingEditId = null
+})
+
+document.getElementById('modal-edit').addEventListener('click', e => {
+  if (e.target === document.getElementById('modal-edit')) {
+    document.getElementById('modal-edit').classList.remove('visible')
+    window._pendingEditId = null
+  }
+})
+
+document.getElementById('edit-submit').addEventListener('click', () => {
+  const sid      = parseInt(document.getElementById('edit-session-id').value)
+  const name     = document.getElementById('edit-name').value.trim()
+  const category = document.getElementById('edit-category').value.trim()
+  const date     = document.getElementById('edit-date').value
+  const start    = document.getElementById('edit-start').value
+  const end      = document.getElementById('edit-end').value
+
+  if (!name || !date || !start || !end) return
+
+  const startedAt = `${date}T${start}:00`
+  const endedAt   = `${date}T${end}:00`
+
+  if (endedAt <= startedAt) {
+    alert('終了時刻は開始時刻より後にしてください。')
+    return
+  }
+
+  window.inkHabit.sessionEdit({
+    session_id:  sid,
+    name,
+    category,
+    started_at:  startedAt,
+    ended_at:    endedAt
+  })
+  document.getElementById('modal-edit').classList.remove('visible')
+})
+
+document.getElementById('edit-delete').addEventListener('click', () => {
+  const sid = parseInt(document.getElementById('edit-session-id').value)
+  if (!confirm('このセッションを削除しますか？')) return
+  window.inkHabit.sessionDelete({ session_id: sid })
+  document.getElementById('modal-edit').classList.remove('visible')
+})
 
 // ── カテゴリインライン編集 ────────────────────────
 function startCatEdit(el) {

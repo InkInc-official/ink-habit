@@ -548,6 +548,29 @@
     transition: all 0.13s; font-family: inherit;
   }
   .btn-add-past:hover { border-color: var(--ink1); color: var(--ink1); }
+  /* セッション編集ボタン */
+  .btn-edit-session {
+    background: none; border: none;
+    color: var(--muted); font-size: 11px;
+    cursor: pointer; padding: 2px 6px;
+    border-radius: 4px; opacity: 0;
+    transition: opacity 0.12s, color 0.12s;
+  }
+  .session-row:hover .btn-edit-session { opacity: 1; }
+  .btn-edit-session:hover { color: var(--ink1); }
+
+  /* 削除ボタン */
+  .btn-delete {
+    padding: 8px 16px; border-radius: 8px;
+    border: 1px solid rgba(255,106,155,0.3);
+    background: rgba(255,106,155,0.07);
+    color: var(--ink2); font-size: 12px;
+    font-family: inherit; cursor: pointer;
+    transition: background 0.13s;
+    margin-right: auto;
+  }
+  .btn-delete:hover { background: rgba(255,106,155,0.18); }
+
   .empty {
     text-align: center; padding: 40px 20px;
     color: var(--muted); font-size: 13px;
@@ -574,7 +597,7 @@
 <div class="titlebar">
   <div class="titlebar-left">
     <span class="tb-logo">Ink<span>.</span>Habit</span>
-    <span class="tb-badge">v2.0</span>
+    <span class="tb-badge">v2.1</span>
   </div>
   <div class="titlebar-controls">
     <button class="ctrl c" id="btn-close"></button>
@@ -805,6 +828,41 @@
     </div>
 
   </main>
+</div>
+
+<!-- セッション編集モーダル -->
+<div class="modal-overlay" id="modal-edit">
+  <div class="modal">
+    <div class="modal-title">✎ セッションを編集</div>
+    <div class="modal-row">
+      <div class="modal-label">タスク名</div>
+      <input class="modal-input" id="edit-name" type="text">
+    </div>
+    <div class="modal-row">
+      <div class="modal-label">カテゴリ</div>
+      <input class="modal-input" id="edit-category" type="text" placeholder="空欄で自動判定">
+    </div>
+    <div class="modal-row">
+      <div class="modal-label">日付</div>
+      <input class="modal-input" id="edit-date" type="date">
+    </div>
+    <div class="modal-row-2col">
+      <div>
+        <div class="modal-label">開始時刻</div>
+        <input class="modal-input" id="edit-start" type="time">
+      </div>
+      <div>
+        <div class="modal-label">終了時刻</div>
+        <input class="modal-input" id="edit-end" type="time">
+      </div>
+    </div>
+    <input type="hidden" id="edit-session-id">
+    <div class="modal-actions">
+      <button class="btn-delete" id="edit-delete">削除する</button>
+      <button class="btn-cancel" id="edit-cancel">キャンセル</button>
+      <button class="btn-add" id="edit-submit">保存する</button>
+    </div>
+  </div>
 </div>
 
 <!-- 過去セッション追加モーダル -->

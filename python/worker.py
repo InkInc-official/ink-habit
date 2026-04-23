@@ -606,6 +606,35 @@ def handle(msg):
         )
         send({'type': 'category-updated', 'req': msg.get('req'), 'session_id': msg['session_id']})
 
+    # ── セッション編集 ──
+    elif action == 'session-edit':
+        sid      = msg['session_id']
+        name     = normalize_task_name(msg['name'])
+        category = msg.get('category') or get_learned_category(name)
+        started  = msg['started_at']
+        ended    = msg['ended_at']
+        start_dt = datetime.datetime.fromisoformat(started)
+        end_dt   = datetime.datetime.fromisoformat(ended)
+        duration = max(0, int((end_dt - start_dt).total_seconds()))
+        db_update('sessions', {
+            'name':         name,
+            'category':     category,
+            'started_at':   started,
+            'ended_at':     ended,
+            'duration_sec': duration
+        }, {'id': sid})
+        send({'type': 'session-edited', 'req': msg.get('req'), 'session_id': sid})
+
+    # ── セッション削除 ──
+    elif action == 'session-delete':
+        con = get_con()
+        cur = con.cursor()
+        cur.execute('DELETE FROM sessions WHERE id=?', (msg['session_id'],))
+        cur.execute('DELETE FROM reminders WHERE session_id=?', (msg['session_id'],))
+        con.commit()
+        con.close()
+        send({'type': 'session-deleted', 'req': msg.get('req'), 'session_id': msg['session_id']})
+
     # ── サジェスト ──
     elif action == 'get-suggestions':
         suggestions = get_task_suggestions()

@@ -27,9 +27,11 @@ contextBridge.exposeInMainWorld('inkHabit', {
   dbQuery:  (payload) => ipcRenderer.invoke('db-query',  payload),
   dbUpdate: (payload) => ipcRenderer.invoke('db-update', payload),
 
-  // ── 過去セッション追加・カテゴリ更新 ──
+  // ── 過去セッション追加・カテゴリ更新・編集・削除 ──
   sessionAddPast:        (payload) => ipcRenderer.invoke('session-add-past',        payload),
   sessionUpdateCategory: (payload) => ipcRenderer.invoke('session-update-category', payload),
+  sessionEdit:           (payload) => ipcRenderer.invoke('session-edit',            payload),
+  sessionDelete:         (payload) => ipcRenderer.invoke('session-delete',          payload),
 
   // ── サジェスト ──
   getSuggestions: () => ipcRenderer.invoke('get-suggestions'),
